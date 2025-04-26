@@ -1,7 +1,12 @@
 jbprg = {
 
   rg1 = {
-    rgname   = "dhiru-rg1"
+    rgname   = "dhiru-rg2"
+    location = "eastus"
+  }
+
+   rg2 = {
+    rgname   = "dhiru-rg3"
     location = "eastus"
   }
 }
