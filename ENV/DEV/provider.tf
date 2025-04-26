@@ -6,11 +6,11 @@ terraform {
     }
   }
   backend "azurerm" {
-  resource_group_name  = "dhiru123"
-  storage_account_name = "dhirustorageaccount"
-  container_name       = "tfstate"
-  key                 = "terraform.tfstate"
-}
+    resource_group_name  = "dhiru123"
+    storage_account_name = "dhirustorageaccount"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
+  }
 }
 
 
