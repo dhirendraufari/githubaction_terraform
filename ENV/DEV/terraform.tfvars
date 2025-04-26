@@ -5,7 +5,7 @@ jbprg = {
     location = "eastus"
   }
 
-   rg2 = {
+  rg2 = {
     rgname   = "dhiru-rg3"
     location = "eastus"
   }
