@@ -1,0 +1,63 @@
+trigger:
+  branches:
+    include:
+    - main
+pool:
+  name: Agentvinod
+stages:
+- stage: todobuild
+  displayName: build
+  jobs:
+  - job: dependencyinstall
+    displayName: dependency install
+    steps:
+    - task: NodeTaskRunnerInstaller@0
+      inputs:
+        nodeVersion: '16'
+    - task: Npm@1
+      inputs:
+        command: 'install'
+        workingDir: '$(System.DefaultWorkingDirectory)'
+    - task: SonarQubePrepare@5
+      inputs:
+        SonarQube: 'sddfd224'
+        scannerMode: 'CLI'
+        configMode: 'manual'
+        cliProjectKey: 'react-app'
+        cliProjectName: 'React App'
+        cliSources: '.'
+        extraProperties: |
+          sonar.javascript.lcov.reportPaths=coverage/lcov.info
+          sonar.sourceEncoding=UTF-8
+        cliScannerVersion: '5.0.1.3006'
+    - task: Npm@1
+      inputs:
+        command: 'custom'
+        workingDir: '$(System.DefaultWorkingDirectory)'
+        customCommand: 'run build'
+    - task: SonarSource.sonarqube.6D01813A-9589-4B15-8491-8164AEB38055.SonarQubeAnalyze@5
+      inputs:
+        jdkversion: 'JAVA_HOME_17_X64'
+    - task: SonarSource.sonarqube.291ed61f-1ee4-45d3-b1b0-bf822d9095ef.SonarQubePublish@5
+      inputs:
+        pollingTimeoutSec: '300'
+    - task: PublishCodeCoverageResults@2
+      displayName: 'Publish code coverage results'
+      inputs:
+        codeCoverageTool: 'JaCoCo'
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/build/reports/jacoco/test/jacocoTestReport.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/build/reports/jacoco/test/html'
+        failIfCoverageEmpty: true
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(Build.BinariesDirectory)'
+        includeRootFolder: true
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+        replaceExistingArchive: true
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(System.DefaultWorkingDirectory)/build'
+        ArtifactName: 'todobuild'
+        publishLocation: 'Container'
+

@@ -1,0 +1,65 @@
+parameters:
+  - name: backendServiceArm
+    type: string
+  - name: subscriptionId
+    type: string
+  - name: resourceGroup
+    type: string
+  - name: storageAccount
+    type: string
+  - name: container
+    type: string
+  - name: tfstateKey
+    type: string
+
+stages:
+- stage: Initialstage
+  displayName: stageone
+  jobs:
+  - job: terraforminitjob
+    displayName: Terraform init job
+    steps:
+    - task: PowerShell@2
+      displayName: 'Install & Run TFLint on Windows'
+      inputs:
+        targetType: 'inline'
+        script: |
+          Invoke-WebRequest -Uri https://github.com/terraform-linters/tflint/releases/latest/download/tflint_windows_amd64.zip -OutFile tflint.zip
+          Expand-Archive tflint.zip -DestinationPath .
+          $env:Path += ";$(System.DefaultWorkingDirectory)"
+          .\tflint.exe --version
+
+    - task: PowerShell@2
+      displayName: 'Run TFLint'
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          .\tflint.exe --version
+          .\tflint --chdir . --recursive
+
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: 'latest'
+
+    - task: TerraformTask@5
+      displayName: 'Terraform Init'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        commandOptions: '-reconfigure'
+        backendServiceArm: ${{ parameters.backendServiceArm }}
+        backendAzureRmOverrideSubscriptionID: ${{ parameters.subscriptionId }}
+        backendAzureRmResourceGroupName: ${{ parameters.resourceGroup }}
+        backendAzureRmStorageAccountName: ${{ parameters.storageAccount }}
+        backendAzureRmContainerName: ${{ parameters.container }}
+        backendAzureRmKey: ${{ parameters.tfstateKey }}
+
+    - task: TerraformTask@5
+      displayName: 'Terraform Plan'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        environmentServiceNameAzureRM: ${{ parameters.backendServiceArm }}
+        environmentAzureRmOverrideSubscriptionID: ${{ parameters.subscriptionId }}

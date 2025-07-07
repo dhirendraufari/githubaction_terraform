@@ -1,0 +1,19 @@
+name: $(Build.DefinitionName)_$(Date:yyyyMMdd)_$(Build.SourceBranchName)_r$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  name: default
+
+stages:
+- template: tflint_template.yaml
+  parameters:
+    backendServiceArm: 'Azure_service_connetion'  # Double-check the spelling of this name in your service connections
+    subscriptionId: '9c2d44b8-0b58-4481-8de2-41223a92f641'
+    resourceGroup: 'MARG_japanEast'
+    storageAccount: 'mastorage011'
+    container: 'azeemcont01'
+    tfstateKey: 'terraform.tfstate'
