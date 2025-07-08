@@ -1,0 +1,70 @@
+trigger:
+  - main
+
+pool:
+  name: SelfHostedPool
+  demands:
+    - docker
+    - NodeJS_18
+
+jobs:
+- job: BuildAndTest
+  steps:
+    - script: node --version
+      displayName: "Check Node.js Version"
+
+    - script: docker --version
+      displayName: "Check Docker Version"
+
+    - script: echo "Building the app..."
+      displayName: "Build Step"
+
+
+-------
+Create a Pipeline YAML in Your ADO Repo calling github repositories
+
+
+trigger:
+  - main
+
+resources:
+  repositories:
+    - repository: sharedTemplates
+      type: github
+      name: your-org/shared-pipeline-templates
+      ref: refs/heads/main
+      endpoint: GitHubServiceConnection  # This is required if your repo is private
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildJob
+        steps:
+          - template: templates/build.yml@sharedTemplates
+            parameters:
+              buildConfig: 'Debug'
+			  
+			  
+------------
+Checkout External GitHub Repo
+
+trigger:
+  - main
+
+resources:
+  repositories:
+    - repository: commonScripts
+      type: github
+      name: your-org/shared-scripts-repo
+      endpoint: GitHubServiceConnection   # Required for private repo
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: commonScripts
+
+  - script: |
+      echo "Listing files from shared GitHub repo:"
+      ls $(Build.SourcesDirectory)/commonScripts
+    displayName: "Use checked-out scripts"
