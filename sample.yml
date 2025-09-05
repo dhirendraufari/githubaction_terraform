@@ -68,3 +68,65 @@ steps:
       echo "Listing files from shared GitHub repo:"
       ls $(Build.SourcesDirectory)/commonScripts
     displayName: "Use checked-out scripts"
+
+
+
+#Example 1: Update DNS Address (Common in IT/DevOps)
+# Script to update DNS for a specific adapter
+param(
+    [string]$AdapterName = "Ethernet",
+    [string[]]$DNSServers = @("8.8.8.8","8.8.4.4")
+)
+
+Set-DnsClientServerAddress -InterfaceAlias $AdapterName -ServerAddresses $DNSServers
+Write-Output "DNS updated for $AdapterName with servers: $($DNSServers -join ', ')"
+
+####Example 2: Restart a Service if Stopped
+$service = "Spooler"
+$status = (Get-Service $service).Status
+
+if ($status -ne "Running") {
+    Start-Service $service
+    Write-Output "$service was stopped. Now started."
+} else {
+    Write-Output "$service is already running."
+}
+
+#####Example 3: Get Top 5 Processes by Memory Usage
+Get-Process | Sort-Object -Property WorkingSet -Descending | Select-Object -First 5 Name, Id, @{Name="MemoryMB";Expression={[math]::round($_.WorkingSet/1MB,2)}}
+
+
+#####
+Get-PSDrive -PSProvider FileSystem | ForEach-Object {
+    if ($_.Free -lt 10GB) {
+        Write-Output "Warning: Low disk space on $($_.Name) drive. Free space: $([math]::round($_.Free/1GB,2)) GB"
+    }
+}
+
+##############Example 5: Export Event Logs to File
+Get-EventLog -LogName System -Newest 50 | Export-Csv "C:\Logs\system_logs.csv" -NoTypeInformation
+
+
+############## LOGS copy from one server to other servers
+
+Import-Module Posh-SSH
+
+$sourcePath = "C:\Application\Logs\*.log"
+$remoteHost = "192.168.1.50"
+$username   = "ubuntu"
+$password   = "YourPassword"
+$remotePath = "/var/log/daily-backup/"
+
+# Create SSH session
+$secpasswd = ConvertTo-SecureString $password -AsPlainText -Force
+$cred = New-Object System.Management.Automation.PSCredential ($username, $secpasswd)
+$session = New-SSHSession -ComputerName $remoteHost -Credential $cred
+
+# Upload logs
+Set-SCPFile -LocalFile $sourcePath -RemotePath $remotePath -SessionId $session.SessionId
+
+Write-Output "Logs copied to $remoteHost:$remotePath"
+
+# Close session
+Remove-SSHSession -SessionId $session.SessionId
+
