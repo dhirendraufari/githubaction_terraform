@@ -21,3 +21,91 @@ fi
 if [ "$ALERT" != "" ]; then
     echo -e "Server Alert on $(hostname)\n\n$ALERT" | mail -s "Linux Server Alert" admin@example.com
 fi
+
+#Find top 5 memory-consuming processes
+#!/bin/bash
+echo "Top 5 Memory Consuming Processes:"
+ps aux --sort=-%mem | head -6
+#👉 Uses ps aux, sorts by memory, prints top 5 (+ header
+
+#Check if a service is running
+#!/bin/bash
+SERVICE="nginx"
+
+if systemctl is-active --quiet $SERVICE; then
+    echo "$SERVICE is running"
+else
+    echo "$SERVICE is NOT running"
+fi
+#Check disk usage and send alert
+#!/bin/bash
+THRESHOLD=80
+USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+
+if [ $USAGE -gt $THRESHOLD ]; then
+    echo "Disk usage is above $THRESHOLD% (Currently $USAGE%)"
+fi
+
+# Count number of lines in a log file containing a keyword
+#!/bin/bash
+LOGFILE="/var/log/syslog"
+KEYWORD="error"
+
+COUNT=$(grep -i "$KEYWORD" $LOGFILE | wc -l)
+echo "Number of '$KEYWORD' entries in $LOGFILE: $COUNT"
+
+# Backup a directory with timestamp
+#!/bin/bash
+SOURCE="/var/www/html"
+DEST="/backup"
+
+FILENAME="backup-$(date +%F-%H%M%S).tar.gz"
+tar -czf $DEST/$FILENAME $SOURCE
+
+echo "Backup created at $DEST/$FILENAME"
+
+#Check if a file exists and is not empty
+#!/bin/bash
+FILE="/tmp/test.txt"
+
+if [ -s "$FILE" ]; then
+    echo "File $FILE exists and is not empty"
+else
+    echo "File $FILE is missing or empty"
+fi
+
+#Simple user login monitor
+#!/bin/bash
+echo "Currently logged in users:"
+who
+echo "Total logged in: $(who | wc -l)"
+
+#Ping test script
+#!/bin/bash
+HOST="google.com"
+
+if ping -c 2 $HOST > /dev/null; then
+    echo "$HOST is reachable"
+else
+    echo "$HOST is NOT reachable"
+fi
+
+#Find the largest file in a directory
+#!/bin/bash
+DIR="/var/log"
+
+echo "Largest file in $DIR:"
+find $DIR -type f -exec du -h {} + | sort -rh | head -1
+
+#CPU load average check
+#!/bin/bash
+LOAD=$(uptime | awk -F'load average:' '{print $2}' | cut -d, -f1 | sed 's/ //g')
+THRESHOLD=1.5
+
+if (( $(echo "$LOAD > $THRESHOLD" | bc -l) )); then
+    echo "High Load: $LOAD"
+else
+    echo "Load Normal: $LOAD"
+fi
+
+
