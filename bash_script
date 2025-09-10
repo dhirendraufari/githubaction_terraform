@@ -1,0 +1,23 @@
+#!/bin/bash
+
+CPU=$(top -b -n1 | grep "Cpu(s)" | awk '{print $2 + $4}')
+MEM=$(free -m | awk '/Mem/ {printf "%.2f", $3/$2*100}')
+DISK=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+
+ALERT=""
+
+if [ ${CPU%.*} -gt 80 ]; then
+    ALERT+="High CPU Usage: $CPU% \n"
+fi
+
+if [ ${MEM%.*} -gt 80 ]; then
+    ALERT+="High Memory Usage: $MEM% \n"
+fi
+
+if [ ${DISK%.*} -gt 80 ]; then
+    ALERT+="Disk Almost Full: $DISK% \n"
+fi
+
+if [ "$ALERT" != "" ]; then
+    echo -e "Server Alert on $(hostname)\n\n$ALERT" | mail -s "Linux Server Alert" admin@example.com
+fi
