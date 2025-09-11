@@ -1,0 +1,42 @@
+trigger:
+- main
+
+variables:
+  coverageThreshold: 80
+
+stages:
+# Stage 1: Build + Test in Dev
+- stage: Dev
+  displayName: Build & Test in Dev
+  jobs:
+  - job: BuildAndTest
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - script: echo "Building app for Dev..."
+      displayName: Build App
+
+    - script: |
+        echo "Running tests..."
+        # Dummy coverage value (replace with actual test command)
+        COVERAGE=85
+        echo "Coverage is $COVERAGE"
+        echo "##vso[task.setvariable variable=coverage;isOutput=true]$COVERAGE"
+      name: SetCoverage
+      displayName: Run Tests & Capture Coverage
+
+# Stage 2: Deploy to QA only if Dev coverage >= threshold
+- stage: QA
+  displayName: Deploy to QA
+  dependsOn: Dev
+  condition: and(
+      succeeded(),
+      greaterOrEquals(dependencies.Dev.outputs['BuildAndTest.SetCoverage.coverage'], variables['coverageThreshold'])
+  )
+  jobs:
+  - job: Deploy
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - script: echo "Deploying to QA (Coverage passed: $(dependencies.Dev.outputs['BuildAndTest.SetCoverage.coverage'])%)"
+      displayName: Deploy Script
