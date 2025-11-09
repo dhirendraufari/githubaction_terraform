@@ -1,0 +1,55 @@
+# azure-pipelines.yml
+trigger:
+  branches: { include: [ main ] }
+  paths:    { include: [ '**/*.sqlproj', 'Database/**', 'db/**' ] }
+
+pool:
+  vmImage: 'windows-latest'  # includes VS 2022 + SSDT build targets
+
+variables:
+  BuildConfiguration: 'Release'
+
+steps:
+- checkout: self
+  clean: true
+
+# Only runs if you have a solution file; safe to keep
+- task: NuGetToolInstaller@1
+  displayName: 'Install NuGet'
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    restoreSolution: '**/*.sln'
+  condition: exists('**/*.sln')
+
+# Build the SQL Database Project -> produces .dacpac under bin/Release
+- task: VSBuild@1
+  displayName: 'Build SQL Project (.sqlproj) -> DACPAC'
+  inputs:
+    solution: '**/*.sqlproj'            # or set exact path e.g., Database/Database.sqlproj
+    msbuildArgs: '/p:TargetDatabaseName=AppDb'
+    platform: 'Any CPU'
+    configuration: '$(BuildConfiguration)'
+
+# Verify DACPAC exists (catches path issues early)
+- powershell: |
+    $dacs = Get-ChildItem -Path "$(Build.SourcesDirectory)" -Recurse -Filter *.dacpac
+    if(-not $dacs){ Write-Error "No .dacpac produced. Check .sqlproj path/build output." }
+    $dacs | ForEach-Object { Write-Host "Found DACPAC: $($_.FullName)" }
+  displayName: 'Verify DACPAC output'
+
+# Copy dacpac to artifact staging
+- task: CopyFiles@2
+  displayName: 'Stage DACPAC artifact'
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)'
+    Contents: '**/bin/$(BuildConfiguration)/**/*.dacpac'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+# Publish artifact named "dacpac"
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish DACPAC artifact'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'dacpac'
+    publishLocation: 'Container'
