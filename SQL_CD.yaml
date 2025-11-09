@@ -1,0 +1,81 @@
+stages:
+- stage: Build
+  jobs:
+  - job: build
+    pool: { vmImage: 'windows-latest' }
+    steps:
+    # (copy all the build steps from the CI pipeline above)
+
+- stage: Deploy_Dev
+  dependsOn: Build
+  jobs:
+  - deployment: dacpac_to_dev
+    environment: dev           # Add environment approvals if you like
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: dacpac
+          - task: SqlAzureDacpacDeployment@1
+            displayName: 'Publish DACPAC to Azure SQL (Dev)'
+            inputs:
+              azureSubscription: '$(AZ_SVC_CONN)'  # Service connection name
+              ServerName: '$(AZ_SQL_SERVER).database.windows.net'
+              DatabaseName: '$(AZ_SQL_DB_DEV)'
+              SqlUsername: '$(AZ_SQL_USER_DEV)'
+              SqlPassword: '$(AZ_SQL_PASSWORD_DEV)'
+              deployType: 'DacpacTask'
+              DacpacFile: '$(Pipeline.Workspace)/dacpac/**/*.dacpac'
+              AdditionalArguments: '/p:BlockOnPossibleDataLoss=False'
+
+- stage: Deploy_UAT
+  dependsOn: Deploy_Dev
+  jobs:
+  - deployment: dacpac_to_uat
+    environment: uat
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: dacpac
+          - task: SqlAzureDacpacDeployment@1
+            displayName: 'Publish DACPAC to Azure SQL (UAT)'
+            inputs:
+              azureSubscription: '$(AZ_SVC_CONN)'
+              ServerName: '$(AZ_SQL_SERVER).database.windows.net'
+              DatabaseName: '$(AZ_SQL_DB_UAT)'
+              SqlUsername: '$(AZ_SQL_USER_UAT)'
+              SqlPassword: '$(AZ_SQL_PASSWORD_UAT)'
+              deployType: 'DacpacTask'
+              DacpacFile: '$(Pipeline.Workspace)/dacpac/**/*.dacpac'
+              AdditionalArguments: '/p:BlockOnPossibleDataLoss=False'
+
+- stage: Deploy_Prod
+  dependsOn: Deploy_UAT
+  jobs:
+  - deployment: dacpac_to_prod
+    environment: prod          # Configure manual approvals here in DevOps Environments
+    strategy:
+      runOnce:
+        preDeploy:
+          steps:
+          - powershell: |
+              # Optional pre-deploy backup (Azure SQL: use Azure Backup or logical export as needed)
+              Write-Host "Take/verify backup before prod deployment."
+        deploy:
+          steps:
+          - download: current
+            artifact: dacpac
+          - task: SqlAzureDacpacDeployment@1
+            displayName: 'Publish DACPAC to Azure SQL (Prod)'
+            inputs:
+              azureSubscription: '$(AZ_SVC_CONN)'
+              ServerName: '$(AZ_SQL_SERVER).database.windows.net'
+              DatabaseName: '$(AZ_SQL_DB_PRD)'
+              SqlUsername: '$(AZ_SQL_USER_PRD)'
+              SqlPassword: '$(AZ_SQL_PASSWORD_PRD)'
+              deployType: 'DacpacTask'
+              DacpacFile: '$(Pipeline.Workspace)/dacpac/**/*.dacpac'
+              AdditionalArguments: '/p:BlockOnPossibleDataLoss=False'
